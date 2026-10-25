@@ -33,14 +33,16 @@ public class NetworkModeTileService extends TileService {
             return;
         }
 
-        // Android network type IDs: LTE=13, NR=20; allowed-network-types is a bitmask.
-        String bitmask = nextNrOnly ? "1048576" : "8192";
+        // TelephonyShellCommand parses NETWORK_TYPES_BITMASK as a BASE-2 string, not decimal.
+        // NR only = NR bit (20); LTE only = LTE + LTE_CA bits.
+        String bitmask = nextNrOnly ? "10000000000000000000" : "01000001000000000000";
         String command = "cmd phone set-allowed-network-types-for-users -s 0 " + bitmask;
+        String verifyCommand = "cmd phone get-allowed-network-types-for-users -s 0";
 
         try {
             Method newProcess = Shizuku.class.getDeclaredMethod("newProcess", String[].class, String[].class, String.class);
             newProcess.setAccessible(true);
-            Process process = (Process) newProcess.invoke(null, new String[]{"sh", "-c", command}, null, null);
+            Process process = (Process) newProcess.invoke(null, new String[]{"sh", "-c", command + " && " + verifyCommand}, null, null);
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                  BufferedReader errors = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
@@ -49,12 +51,13 @@ public class NetworkModeTileService extends TileService {
                 while ((line = errors.readLine()) != null) output.append(line).append('\n');
             }
             int exit = process.waitFor();
-            if (exit == 0) {
+            String result = output.toString().trim();
+            if (exit == 0 && result.contains("completed")) {
                 getPrefs().edit().putBoolean("nr_only", nextNrOnly).apply();
                 refreshTile();
-                Toast.makeText(this, nextNrOnly ? "NR-only mode requested" : "LTE-only mode requested", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, (nextNrOnly ? "NR-only requested" : "LTE-only requested") + ". Radio readback: " + result, Toast.LENGTH_LONG).show();
             } else {
-                Toast.makeText(this, "Change rejected by Android/OEM. " + output.toString().trim(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Network mode change failed: " + (result.isEmpty() ? "no output" : result), Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
             Toast.makeText(this, "Could not change network mode: " + e.getClass().getSimpleName(), Toast.LENGTH_LONG).show();
