@@ -13,8 +13,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 public class NetworkModeTileService extends TileService {
-    private static final int SHIZUKU_REQUEST_CODE = 4105;
-
     @Override
     public void onStartListening() {
         super.onStartListening();
@@ -24,7 +22,7 @@ public class NetworkModeTileService extends TileService {
     @Override
     public void onClick() {
         super.onClick();
-        boolean nextNrOnly = getPrefs().getBoolean("nr_only", false) == false;
+        boolean nextNrOnly = !getPrefs().getBoolean("nr_only", false);
 
         if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Open 5G Switch and authorize Shizuku first", Toast.LENGTH_LONG).show();
@@ -34,9 +32,10 @@ public class NetworkModeTileService extends TileService {
             return;
         }
 
-        String command = nextNrOnly
-                ? "cmd phone set-allowed-network-types-for-users -s 0 524288"
-                : "cmd phone set-allowed-network-types-for-users -s 0 4096";
+        // Android's cmd phone accepts the allowed-network bitmask as a base-2 string.
+        // Android network type IDs: LTE=13, NR=20.
+        String bitmask = nextNrOnly ? "10000000000000000000" : "1000000000000";
+        String command = "cmd phone set-allowed-network-types-for-users -s 0 " + bitmask;
 
         try {
             Process process = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, null);
@@ -51,9 +50,9 @@ public class NetworkModeTileService extends TileService {
             if (exit == 0) {
                 getPrefs().edit().putBoolean("nr_only", nextNrOnly).apply();
                 refreshTile();
-                Toast.makeText(this, nextNrOnly ? "Requested NR-only mode" : "Requested LTE-only mode", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, nextNrOnly ? "NR-only mode requested" : "LTE-only mode requested", Toast.LENGTH_LONG).show();
             } else {
-                Toast.makeText(this, "Network mode change failed. Check Shizuku / OEM support.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Change rejected by Android/OEM. " + output.toString().trim(), Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
             Toast.makeText(this, "Could not change network mode: " + e.getClass().getSimpleName(), Toast.LENGTH_LONG).show();
@@ -70,7 +69,7 @@ public class NetworkModeTileService extends TileService {
         boolean nrOnly = getPrefs().getBoolean("nr_only", false);
         tile.setState(nrOnly ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.setLabel(nrOnly ? "NR only" : "LTE only");
-        tile.setSubtitle(nrOnly ? "5G standalone mode request" : "4G only mode request");
+        tile.setSubtitle(nrOnly ? "5G-only request" : "4G-only request");
         tile.updateTile();
     }
 }
