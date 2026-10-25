@@ -11,6 +11,7 @@ import rikka.shizuku.Shizuku;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 
 public class NetworkModeTileService extends TileService {
     @Override
@@ -32,13 +33,14 @@ public class NetworkModeTileService extends TileService {
             return;
         }
 
-        // Android's cmd phone accepts the allowed-network bitmask as a base-2 string.
-        // Android network type IDs: LTE=13, NR=20.
-        String bitmask = nextNrOnly ? "10000000000000000000" : "1000000000000";
+        // Android network type IDs: LTE=13, NR=20; allowed-network-types is a bitmask.
+        String bitmask = nextNrOnly ? "1048576" : "8192";
         String command = "cmd phone set-allowed-network-types-for-users -s 0 " + bitmask;
 
         try {
-            Process process = Shizuku.newProcess(new String[]{"sh", "-c", command}, null, null);
+            Method newProcess = Shizuku.class.getDeclaredMethod("newProcess", String[].class, String[].class, String.class);
+            newProcess.setAccessible(true);
+            Process process = (Process) newProcess.invoke(null, new String[]{"sh", "-c", command}, null, null);
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                  BufferedReader errors = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
