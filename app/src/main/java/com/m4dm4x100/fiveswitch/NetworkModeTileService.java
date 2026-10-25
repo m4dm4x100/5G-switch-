@@ -36,7 +36,7 @@ public class NetworkModeTileService extends TileService {
         // TelephonyShellCommand parses NETWORK_TYPES_BITMASK as a BASE-2 string, not decimal.
         // NR only = NR bit (20); LTE only = LTE + LTE_CA bits.
         String bitmask = nextNrOnly ? "10000000000000000000" : "01000001000000000000";
-        String command = "cmd phone set-allowed-network-types-for-users -s 0 " + bitmask;
+        String command = "cmd phone set-allowed-network-types-for-users 1 " + bitmask;
         String verifyCommand = "cmd phone get-allowed-network-types-for-users -s 0";
 
         try {
