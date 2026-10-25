@@ -9,7 +9,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.Toast;\nimport android.content.ClipboardManager;\nimport android.content.ClipData;
 
 import rikka.shizuku.Shizuku;
 
@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Shizuku.addRequestPermissionResultListener(permissionListener);
+        Shizuku.addRequestPermissionResultListener(permissionListener);\n        DiagnosticLog.add(this, "MainActivity opened");
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
         authorize.setOnClickListener(v -> requestShizuku());
         root.addView(authorize, matchWrap());
 
-        Button tileHelp = new Button(this);
+        Button diagnostics = new Button(this);\n        diagnostics.setText("Copy diagnostic report");\n        diagnostics.setOnClickListener(v -> {\n            String report = DiagnosticLog.read(this);\n            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);\n            clipboard.setPrimaryClip(ClipData.newPlainText("5G Switch diagnostics", report));\n            Toast.makeText(this, "Diagnostics copied. Paste them into ChatGPT.", Toast.LENGTH_LONG).show();\n        });\n        root.addView(diagnostics, matchWrap());\n\n        Button clearDiagnostics = new Button(this);\n        clearDiagnostics.setText("Clear diagnostic report");\n        clearDiagnostics.setOnClickListener(v -> { DiagnosticLog.clear(this); DiagnosticLog.add(this, "Diagnostic log cleared by user"); Toast.makeText(this, "Diagnostics cleared", Toast.LENGTH_SHORT).show(); });\n        root.addView(clearDiagnostics, matchWrap());\n\n        Button tileHelp = new Button(this);
         tileHelp.setText("How to add Quick Settings tile");
         tileHelp.setOnClickListener(v -> Toast.makeText(this,
                 "Pull down Quick Settings twice, tap Edit, then add “5G / LTE”.", Toast.LENGTH_LONG).show());
